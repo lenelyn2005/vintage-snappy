@@ -1,0 +1,1553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vintage Photo Booth</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&family=Oswald:wght@300;400;500&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Merriweather', serif;
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            background-image: 
+                url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="#ffffff" fill-opacity="0.1" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,112C672,96,768,96,864,112C960,128,1056,160,1152,160C1248,160,1344,128,1392,112L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>'),
+                radial-gradient(circle at 30% 40%, rgba(52, 152, 219, 0.2) 0%, transparent 50%),
+                radial-gradient(circle at 70% 60%, rgba(231, 76, 60, 0.15) 0%, transparent 50%);
+            background-size: cover, auto, auto;
+            background-position: center, center, center;
+            background-attachment: fixed;
+            min-height: 100vh;
+            color: #ffffff;
+        }
+        
+        .grain-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.05;
+            background-image: url('data:image/svg+xml,<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg"><filter id="noiseFilter"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noiseFilter)" opacity="0.4"/></svg>');
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .header {
+            background: rgba(44, 62, 80, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header h1 {
+            font-family: 'Oswald', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 500;
+            color: #ecf0f1;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            letter-spacing: 2px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .mode-tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 0.5rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        .tab-btn {
+            flex: 1;
+            max-width: 200px;
+            padding: 1rem 2rem;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.1rem;
+            color: #bdc3c7;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-btn.active {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            color: #ecf0f1;
+            box-shadow: 0 4px 15px rgba(44, 62, 80, 0.3);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .camera-container {
+            position: relative;
+            background: #1a252f;
+            border-radius: 20px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+        
+        .camera-feed {
+            width: 100%;
+            height: 400px;
+            object-fit: cover;
+            display: block;
+        }
+        
+        .camera-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .camera-select {
+            padding: 0.5rem;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            color: #ecf0f1;
+            border: none;
+            font-family: 'Merriweather', serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .camera-select:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .capture-btn {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            border: 4px solid #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(231, 76, 60, 0.4);
+        }
+        
+        .capture-btn:hover {
+            transform: translateX(-50%) scale(1.1);
+            box-shadow: 0 12px 35px rgba(231, 76, 60, 0.6);
+        }
+        
+        .upload-area {
+            border: 3px dashed #2c3e50;
+            border-radius: 20px;
+            padding: 3rem;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 2rem;
+        }
+        
+        .upload-area:hover {
+            border-color: #3498db;
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .upload-area.dragover {
+            border-color: #e74c3c;
+            background: rgba(231, 76, 60, 0.1);
+        }
+        
+        .upload-text {
+            font-size: 1.2rem;
+            color: #bdc3c7;
+            margin-bottom: 1rem;
+        }
+        
+        .upload-btn {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            color: #ecf0f1;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-btn:hover {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(44, 62, 80, 0.3);
+        }
+        
+        .editing-workspace {
+            display: none;
+            grid-template-columns: 1fr 300px;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .editing-workspace.active {
+            display: grid;
+        }
+        
+        .preview-area {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        .preview-image {
+            width: 100%;
+            max-height: 500px;
+            object-fit: contain;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .filter-sidebar {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            height: fit-content;
+        }
+        
+        .filter-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: #2c3e50;
+            text-align: center;
+        }
+        
+        .filter-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        .filter-btn {
+            aspect-ratio: 1;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            text-align: center;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+        
+        .filter-btn:hover {
+            border-color: #2c3e50;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .filter-btn.active {
+            border-color: #e74c3c;
+            background: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+        }
+        
+        .collage-controls {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .collage-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: #2c3e50;
+        }
+        
+        .collage-options {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .collage-btn {
+            flex: 1;
+            padding: 0.8rem;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #2c3e50;
+            transition: all 0.3s ease;
+        }
+        
+        .collage-btn.active {
+            border-color: #e74c3c;
+            background: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .action-btn {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 25px;
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 150px;
+        }
+        
+        .action-btn.primary {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: #fff;
+        }
+        
+        .action-btn.secondary {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            color: #ecf0f1;
+        }
+        
+        .action-btn.tertiary {
+            background: rgba(255, 255, 255, 0.2);
+            color: #2c3e50;
+            border: 2px solid #2c3e50;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+        
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .loading.active {
+            display: flex;
+        }
+        
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid #e74c3c;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .preview-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+        
+        .preview-modal.active {
+            display: flex;
+        }
+        
+        .preview-content {
+            max-width: 90%;
+            max-height: 90%;
+            text-align: center;
+        }
+        
+        .preview-content img {
+            max-width: 100%;
+            max-height: 70vh;
+            object-fit: contain;
+            border-radius: 12px;
+        }
+        
+        .preview-actions {
+            margin-top: 2rem;
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: #fff;
+            font-size: 2rem;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+            
+            .editing-workspace {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .filter-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .action-btn {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+        
+        /* Filter Effects */
+        .filter-polaroid {
+            filter: contrast(1.1) brightness(1.1) saturate(0.9) sepia(0.1);
+        }
+        
+        .filter-film-grain {
+            filter: contrast(1.2) brightness(0.95) saturate(1.1) sepia(0.05);
+        }
+        
+        .filter-light-leaks {
+            filter: contrast(1.1) brightness(1.2) saturate(1.2) hue-rotate(10deg);
+        }
+        
+        .filter-toy-camera {
+            filter: contrast(1.3) brightness(0.9) saturate(1.4) sepia(0.2) hue-rotate(-10deg);
+        }
+        
+        .filter-retro-color {
+            filter: contrast(1.1) brightness(1.05) saturate(1.3) hue-rotate(20deg) sepia(0.15);
+        }
+        
+        .filter-bw {
+            filter: grayscale(1) contrast(1.2) brightness(0.95);
+        }
+        
+        .filter-sepia {
+            filter: sepia(1) contrast(1.1) brightness(1.05);
+        }
+        
+        .filter-lomo {
+            filter: contrast(1.4) brightness(0.9) saturate(1.5) sepia(0.3) hue-rotate(-5deg);
+        }
+        
+        .filter-cross-process {
+            filter: contrast(1.3) brightness(1.1) saturate(1.6) hue-rotate(15deg) sepia(0.1);
+        }
+        
+        .filter-vintage-fade {
+            filter: contrast(0.9) brightness(1.2) saturate(0.8) sepia(0.4) blur(0.5px);
+        }
+        
+        .filter-kodachrome {
+            filter: contrast(1.2) brightness(1.05) saturate(1.4) hue-rotate(5deg) sepia(0.05);
+        }
+        
+        /* Texture overlays */
+        .texture-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            mix-blend-mode: overlay;
+            opacity: 0.3;
+        }
+        
+        .dust-overlay {
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(255,255,255,0.1) 1px, transparent 1px),
+                radial-gradient(circle at 70% 60%, rgba(0,0,0,0.05) 0.5px, transparent 0.5px),
+                radial-gradient(circle at 40% 80%, rgba(255,255,255,0.08) 0.8px, transparent 0.8px);
+        }
+        
+        .scratch-overlay {
+            background: linear-gradient(45deg, transparent 48%, rgba(255,255,255,0.05) 49%, rgba(255,255,255,0.05) 51%, transparent 52%),
+                        linear-gradient(-45deg, transparent 48%, rgba(0,0,0,0.03) 49%, rgba(0,0,0,0.03) 51%, transparent 52%);
+        }
+        
+        /* Enhanced collage styles */
+        .collage-frame {
+            position: relative;
+            background: #ecf0f1;
+            border: 10px solid #bdc3c7;
+            box-shadow: 
+                inset 0 0 20px rgba(0,0,0,0.1),
+                0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .polaroid-frame {
+            background: #fff;
+            padding: 15px 15px 50px 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            transform: rotate(-2deg);
+        }
+        
+        /* Photo strip styling */
+        .photo-strip {
+            background: #1a252f;
+            border-radius: 20px;
+            padding: 20px;
+            position: relative;
+        }
+        
+        .photo-strip::before {
+            content: '';
+            position: absolute;
+            left: 10px;
+            top: 0;
+            bottom: 0;
+            width: 20px;
+            background: repeating-linear-gradient(
+                to bottom,
+                #1a252f 0px,
+                #1a252f 15px,
+                transparent 15px,
+                transparent 30px
+            );
+        }
+        
+        .photo-strip::after {
+            content: '';
+            position: absolute;
+            right: 10px;
+            top: 0;
+            bottom: 0;
+            width: 20px;
+            background: repeating-linear-gradient(
+                to bottom,
+                #1a252f 0px,
+                #1a252f 15px,
+                transparent 15px,
+                transparent 30px
+            );
+        }
+        
+        /* Advanced editing controls */
+        .editing-controls {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .control-group {
+            margin-bottom: 1rem;
+        }
+        
+        .control-label {
+            display: block;
+            font-size: 0.9rem;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        
+        .slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.3);
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #e74c3c;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+        
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #e74c3c;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+        
+        /* Frame selection */
+        .frame-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .frame-btn {
+            aspect-ratio: 1;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            color: #2c3e50;
+        }
+        
+        .frame-btn:hover {
+            border-color: #2c3e50;
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .frame-btn.active {
+            border-color: #e74c3c;
+            background: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+        }
+        
+        /* Enhance mobile responsiveness */
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.8rem;
+                letter-spacing: 1px;
+            }
+            
+            .container {
+                padding: 0.5rem;
+            }
+            
+            .mode-tabs {
+                margin-bottom: 1rem;
+            }
+            
+            .tab-btn {
+                padding: 0.8rem 1rem;
+                font-size: 1rem;
+            }
+            
+            .camera-feed {
+                height: 300px;
+            }
+            
+            .capture-btn {
+                width: 60px;
+                height: 60px;
+            }
+            
+            .filter-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.8rem;
+            }
+            
+            .filter-btn {
+                font-size: 0.8rem;
+                padding: 0.5rem;
+            }
+        }
+        
+        /* Animation enhancements */
+        @keyframes photoFlash {
+            0% { background: transparent; }
+            50% { background: rgba(255, 255, 255, 0.8); }
+            100% { background: transparent; }
+        }
+        
+        .photo-flash {
+            animation: photoFlash 0.3s ease-out;
+        }
+        
+        @keyframes filterTransition {
+            0% { opacity: 0; transform: scale(0.95); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        
+        .filter-transition {
+            animation: filterTransition 0.3s ease-out;
+        }
+        
+        /* Vintage UI elements */
+        .vintage-border {
+            border: 3px solid #7f8c8d;
+            border-radius: 8px;
+            box-shadow: 
+                inset 0 0 0 1px #ecf0f1,
+                0 2px 8px rgba(0,0,0,0.15);
+        }
+        
+        .film-holes {
+            position: relative;
+        }
+        
+        .film-holes::before,
+        .film-holes::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 8px;
+            height: 8px;
+            background: #1a252f;
+            border-radius: 50%;
+        }
+        
+        .film-holes::before {
+            left: -15px;
+        }
+        
+        .film-holes::after {
+            right: -15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="grain-overlay"></div>
+    
+    <header class="header">
+        <h1>📸 Vintage Photo Booth</h1>
+    </header>
+    
+    <div class="container">
+        <div class="mode-tabs">
+            <button class="tab-btn active" data-tab="capture">📷 Live Capture</button>
+            <button class="tab-btn" data-tab="upload">📁 Upload Photo</button>
+        </div>
+        
+        <div id="capture-tab" class="tab-content active">
+            <div class="camera-container">
+                <video id="camera-feed" class="camera-feed" autoplay muted playsinline></video>
+                <div class="camera-controls">
+                    <select id="camera-select" class="camera-select">
+                        <option value="">Select Camera</option>
+                    </select>
+                </div>
+                <canvas id="capture-canvas" style="display: none;"></canvas>
+                <button id="capture-btn" class="capture-btn"></button>
+            </div>
+            <div id="camera-error" style="display: none; text-align: center; padding: 2rem; color: #bdc3c7;">
+                Camera not available. Please use the upload option or check your camera permissions.
+            </div>
+        </div>
+        
+        <div id="upload-tab" class="tab-content">
+            <div class="upload-area" id="upload-area">
+                <div class="upload-text">Drag and drop your photo here</div>
+                <button class="upload-btn" id="upload-btn">Choose File</button>
+                <input type="file" id="file-input" accept="image/*" style="display: none;">
+            </div>
+        </div>
+        
+        <div id="editing-workspace" class="editing-workspace">
+            <div class="preview-area">
+                <img id="preview-image" class="preview-image" alt="Preview">
+                
+                <div class="collage-controls">
+                    <div class="collage-title">Create Collage</div>
+                    <div class="collage-options">
+                        <button class="collage-btn" data-layout="single">Single</button>
+                        <button class="collage-btn" data-layout="strip">Photo Strip</button>
+                        <button class="collage-btn" data-layout="grid2x2">2×2 Grid</button>
+                        <button class="collage-btn" data-layout="grid3x3">3×3 Grid</button>
+                    </div>
+                    <button id="add-photo-btn" class="upload-btn" style="width: 100%;">+ Add Another Photo</button>
+                </div>
+                
+                <div class="action-buttons">
+                    <button id="preview-btn" class="action-btn primary">🔍 Preview & Download</button>
+                    <button id="share-btn" class="action-btn secondary">📤 Share</button>
+                    <button id="start-over-btn" class="action-btn tertiary">🔄 Start Over</button>
+                </div>
+            </div>
+            
+            <div class="filter-sidebar">
+                <div class="filter-title">Vintage Filters</div>
+                <div class="filter-grid">
+                    <button class="filter-btn active" data-filter="none">Original</button>
+                    <button class="filter-btn" data-filter="polaroid">📱 Polaroid</button>
+                    <button class="filter-btn" data-filter="film-grain">🎞️ Film Grain</button>
+                    <button class="filter-btn" data-filter="light-leaks">💡 Light Leaks</button>
+                    <button class="filter-btn" data-filter="toy-camera">🧸 Toy Camera</button>
+                    <button class="filter-btn" data-filter="retro-color">🌈 Retro Color</button>
+                    <button class="filter-btn" data-filter="bw">⚫ Black & White</button>
+                    <button class="filter-btn" data-filter="sepia">🟤 Sepia</button>
+                    <button class="filter-btn" data-filter="lomo">📷 Lomo</button>
+                    <button class="filter-btn" data-filter="cross-process">🎨 Cross Process</button>
+                    <button class="filter-btn" data-filter="vintage-fade">🌫️ Vintage Fade</button>
+                    <button class="filter-btn" data-filter="kodachrome">🎯 Kodachrome</button>
+                </div>
+                
+                <div class="editing-controls">
+                    <div class="filter-title">Fine Tune</div>
+                    <div class="control-group">
+                        <label class="control-label">Brightness</label>
+                        <input type="range" class="slider" id="brightness-slider" min="0.5" max="1.5" step="0.1" value="1">
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Contrast</label>
+                        <input type="range" class="slider" id="contrast-slider" min="0.5" max="2" step="0.1" value="1">
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Saturation</label>
+                        <input type="range" class="slider" id="saturation-slider" min="0" max="2" step="0.1" value="1">
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Vintage Texture</label>
+                        <div class="frame-options">
+                            <button class="frame-btn active" data-texture="none">None</button>
+                            <button class="frame-btn" data-texture="dust">Dust</button>
+                            <button class="frame-btn" data-texture="scratch">Scratch</button>
+                            <button class="frame-btn" data-texture="grain">Grain</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="editing-controls">
+                    <div class="filter-title">Photo Frames</div>
+                    <div class="frame-options">
+                        <button class="frame-btn active" data-frame="none">📷 None</button>
+                        <button class="frame-btn" data-frame="polaroid">📸 Polaroid</button>
+                        <button class="frame-btn" data-frame="vintage">🖼️ Vintage</button>
+                        <button class="frame-btn" data-frame="film">🎞️ Film Strip</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="loading" class="loading">
+        <div class="loading-spinner"></div>
+    </div>
+    
+    <div id="preview-modal" class="preview-modal">
+        <button class="close-btn" id="close-preview">×</button>
+        <div class="preview-content">
+            <img id="final-preview" alt="Final Preview">
+            <div class="preview-actions">
+                <button id="download-btn" class="action-btn primary">💾 Download</button>
+                <button id="share-final-btn" class="action-btn secondary">📤 Share</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        class VintagePhotoBooth {
+            constructor() {
+                this.currentImage = null;
+                this.currentFilter = 'none';
+                this.currentLayout = 'single';
+                this.currentFrame = 'none';
+                this.currentTexture = 'none';
+                this.collageImages = [];
+                this.stream = null;
+                this.currentCameraId = null;
+                this.customFilters = {
+                    brightness: 1,
+                    contrast: 1,
+                    saturation: 1
+                };
+                
+                this.initializeElements();
+                this.bindEvents();
+                this.initializeCamera();
+                this.populateCameraList();
+            }
+            
+            initializeElements() {
+                this.elements = {
+                    tabBtns: document.querySelectorAll('.tab-btn'),
+                    tabContents: document.querySelectorAll('.tab-content'),
+                    cameraFeed: document.getElementById('camera-feed'),
+                    captureBtn: document.getElementById('capture-btn'),
+                    captureCanvas: document.getElementById('capture-canvas'),
+                    cameraError: document.getElementById('camera-error'),
+                    uploadArea: document.getElementById('upload-area'),
+                    uploadBtn: document.getElementById('upload-btn'),
+                    fileInput: document.getElementById('file-input'),
+                    editingWorkspace: document.getElementById('editing-workspace'),
+                    previewImage: document.getElementById('preview-image'),
+                    filterBtns: document.querySelectorAll('.filter-btn'),
+                    collageBtns: document.querySelectorAll('.collage-btn'),
+                    frameBtns: document.querySelectorAll('[data-frame]'),
+                    textureBtns: document.querySelectorAll('[data-texture]'),
+                    brightnessSlider: document.getElementById('brightness-slider'),
+                    contrastSlider: document.getElementById('contrast-slider'),
+                    saturationSlider: document.getElementById('saturation-slider'),
+                    addPhotoBtn: document.getElementById('add-photo-btn'),
+                    previewBtn: document.getElementById('preview-btn'),
+                    shareBtn: document.getElementById('share-btn'),
+                    startOverBtn: document.getElementById('start-over-btn'),
+                    loading: document.getElementById('loading'),
+                    previewModal: document.getElementById('preview-modal'),
+                    finalPreview: document.getElementById('final-preview'),
+                    closePreview: document.getElementById('close-preview'),
+                    downloadBtn: document.getElementById('download-btn'),
+                    shareFinalBtn: document.getElementById('share-final-btn'),
+                    cameraSelect: document.getElementById('camera-select')
+                };
+            }
+            
+            bindEvents() {
+                // Tab switching
+                this.elements.tabBtns.forEach(btn => {
+                    btn.addEventListener('click', (e) => this.switchTab(e.target.dataset.tab));
+                });
+                
+                // Camera capture
+                this.elements.captureBtn.addEventListener('click', () => this.capturePhoto());
+                
+                // Camera selection
+                this.elements.cameraSelect.addEventListener('change', (e) => this.switchCamera(e.target.value));
+                
+                // File upload
+                this.elements.uploadBtn.addEventListener('click', () => this.elements.fileInput.click());
+                this.elements.fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
+                
+                // Drag and drop
+                this.elements.uploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    this.elements.uploadArea.classList.add('dragover');
+                });
+                
+                this.elements.uploadArea.addEventListener('dragleave', () => {
+                    this.elements.uploadArea.classList.remove('dragover');
+                });
+                
+                this.elements.uploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    this.elements.uploadArea.classList.remove('dragover');
+                    this.handleFileDrop(e);
+                });
+                
+                // Filter buttons
+                this.elements.filterBtns.forEach(btn => {
+                    btn.addEventListener('click', (e) => this.applyFilter(e.target.dataset.filter));
+                });
+                
+                // Frame and texture buttons
+                this.elements.frameBtns.forEach(btn => {
+                    btn.addEventListener('click', (e) => this.applyFrame(e.target.dataset.frame));
+                });
+                
+                this.elements.textureBtns.forEach(btn => {
+                    btn.addEventListener('click', (e) => this.applyTexture(e.target.dataset.texture));
+                });
+                
+                // Sliders
+                this.elements.brightnessSlider.addEventListener('input', (e) => this.updateCustomFilter('brightness', e.target.value));
+                this.elements.contrastSlider.addEventListener('input', (e) => this.updateCustomFilter('contrast', e.target.value));
+                this.elements.saturationSlider.addEventListener('input', (e) => this.updateCustomFilter('saturation', e.target.value));
+                
+                // Collage buttons
+                this.elements.collageBtns.forEach(btn => {
+                    btn.addEventListener('click', (e) => this.setCollageLayout(e.target.dataset.layout));
+                });
+                
+                // Action buttons
+                this.elements.addPhotoBtn.addEventListener('click', () => this.addPhoto());
+                this.elements.previewBtn.addEventListener('click', () => this.showPreview());
+                this.elements.shareBtn.addEventListener('click', () => this.shareImage());
+                this.elements.startOverBtn.addEventListener('click', () => this.startOver());
+                
+                // Modal controls
+                this.elements.closePreview.addEventListener('click', () => this.closePreview());
+                this.elements.downloadBtn.addEventListener('click', () => this.downloadImage());
+                this.elements.shareFinalBtn.addEventListener('click', () => this.shareImage());
+            }
+            
+            async populateCameraList() {
+                try {
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                    
+                    this.elements.cameraSelect.innerHTML = '<option value="">Select Camera</option>';
+                    
+                    videoDevices.forEach((device, index) => {
+                        const option = document.createElement('option');
+                        option.value = device.deviceId;
+                        option.text = device.label || `Camera ${index + 1}`;
+                        this.elements.cameraSelect.appendChild(option);
+                    });
+                } catch (error) {
+                    console.error('Error enumerating devices:', error);
+                }
+            }
+            
+            async switchCamera(deviceId) {
+                if (this.currentCameraId === deviceId) return;
+                
+                this.currentCameraId = deviceId;
+                
+                // Stop existing stream
+                if (this.stream) {
+                    this.stream.getTracks().forEach(track => track.stop());
+                }
+                
+                try {
+                    const constraints = {
+                        video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'user' }
+                    };
+                    
+                    this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    this.elements.cameraFeed.srcObject = this.stream;
+                    this.elements.cameraError.style.display = 'none';
+                    this.elements.cameraFeed.style.display = 'block';
+                } catch (error) {
+                    console.error('Camera access error:', error);
+                    this.elements.cameraFeed.style.display = 'none';
+                    this.elements.cameraError.style.display = 'block';
+                }
+            }
+            
+            async initializeCamera() {
+                await this.switchCamera(null);
+            }
+            
+            switchTab(tab) {
+                // Update tab buttons
+                this.elements.tabBtns.forEach(btn => btn.classList.remove('active'));
+                document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+                
+                // Update tab content
+                this.elements.tabContents.forEach(content => content.classList.remove('active'));
+                document.getElementById(`${tab}-tab`).classList.add('active');
+            }
+            
+            capturePhoto() {
+                const canvas = this.elements.captureCanvas;
+                const video = this.elements.cameraFeed;
+                const ctx = canvas.getContext('2d');
+                
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                
+                // Add camera flash effect
+                document.body.classList.add('photo-flash');
+                setTimeout(() => document.body.classList.remove('photo-flash'), 300);
+                
+                ctx.drawImage(video, 0, 0);
+                
+                canvas.toBlob((blob) => {
+                    const url = URL.createObjectURL(blob);
+                    this.loadImage(url);
+                });
+            }
+            
+            handleFileUpload(event) {
+                const file = event.target.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    const url = URL.createObjectURL(file);
+                    this.loadImage(url);
+                }
+            }
+            
+            handleFileDrop(event) {
+                const files = event.dataTransfer.files;
+                const file = files[0];
+                if (file && file.type.startsWith('image/')) {
+                    const url = URL.createObjectURL(file);
+                    this.loadImage(url);
+                }
+            }
+            
+            loadImage(url) {
+                this.showLoading();
+                
+                const img = new Image();
+                img.onload = () => {
+                    this.currentImage = url;
+                    this.elements.previewImage.src = url;
+                    this.elements.editingWorkspace.classList.add('active');
+                    this.hideLoading();
+                    
+                    // Initialize collage with current image
+                    this.collageImages = [url];
+                    this.setCollageLayout('single');
+                };
+                img.src = url;
+            }
+            
+            applyFilter(filter) {
+                // Update active filter button
+                this.elements.filterBtns.forEach(btn => btn.classList.remove('active'));
+                document.querySelector(`[data-filter="${filter}"]`).classList.add('active');
+                
+                this.currentFilter = filter;
+                this.updatePreviewFilters();
+            }
+            
+            applyFrame(frame) {
+                this.elements.frameBtns.forEach(btn => btn.classList.remove('active'));
+                document.querySelector(`[data-frame="${frame}"]`).classList.add('active');
+                
+                this.currentFrame = frame;
+                this.updatePreviewFrame();
+            }
+            
+            applyTexture(texture) {
+                this.elements.textureBtns.forEach(btn => btn.classList.remove('active'));
+                document.querySelector(`[data-texture="${texture}"]`).classList.add('active');
+                
+                this.currentTexture = texture;
+                this.updatePreviewTexture();
+            }
+            
+            updateCustomFilter(property, value) {
+                this.customFilters[property] = parseFloat(value);
+                this.updatePreviewFilters();
+            }
+            
+            updatePreviewFilters() {
+                // Remove existing filter classes
+                this.elements.previewImage.className = 'preview-image filter-transition';
+                
+                // Build custom filter string
+                let filterString = `brightness(${this.customFilters.brightness}) contrast(${this.customFilters.contrast}) saturate(${this.customFilters.saturation})`;
+                
+                // Add preset filter effects
+                const presetFilters = {
+                    'polaroid': 'sepia(0.1)',
+                    'film-grain': 'sepia(0.05)',
+                    'light-leaks': 'hue-rotate(10deg)',
+                    'toy-camera': 'sepia(0.2) hue-rotate(-10deg) saturate(1.4)',
+                    'retro-color': 'hue-rotate(20deg) sepia(0.15)',
+                    'bw': 'grayscale(1)',
+                    'sepia': 'sepia(1)',
+                    'lomo': 'sepia(0.3) hue-rotate(-5deg) saturate(1.5)',
+                    'cross-process': 'hue-rotate(15deg) sepia(0.1) saturate(1.6)',
+                    'vintage-fade': 'sepia(0.4) blur(0.5px)',
+                    'kodachrome': 'hue-rotate(5deg) sepia(0.05) saturate(1.4)'
+                };
+                
+                if (this.currentFilter !== 'none' && presetFilters[this.currentFilter]) {
+                    filterString += ` ${presetFilters[this.currentFilter]}`;
+                }
+                
+                this.elements.previewImage.style.filter = filterString;
+            }
+            
+            updatePreviewFrame() {
+                const container = this.elements.previewImage.parentElement;
+                
+                // Remove existing frame classes
+                container.classList.remove('collage-frame', 'polaroid-frame', 'vintage-border', 'photo-strip');
+                
+                // Apply new frame
+                switch (this.currentFrame) {
+                    case 'polaroid':
+                        container.classList.add('polaroid-frame');
+                        break;
+                    case 'vintage':
+                        container.classList.add('vintage-border');
+                        break;
+                    case 'film':
+                        container.classList.add('photo-strip', 'film-holes');
+                        break;
+                }
+            }
+            
+            updatePreviewTexture() {
+                const container = this.elements.previewImage.parentElement;
+                
+                // Remove existing texture overlays
+                const existingOverlays = container.querySelectorAll('.texture-overlay');
+                existingOverlays.forEach(overlay => overlay.remove());
+                
+                // Add new texture overlay
+                if (this.currentTexture !== 'none') {
+                    const overlay = document.createElement('div');
+                    overlay.className = `texture-overlay ${this.currentTexture}-overlay`;
+                    container.appendChild(overlay);
+                }
+            }
+            
+            setCollageLayout(layout) {
+                // Update active layout button
+                this.elements.collageBtns.forEach(btn => btn.classList.remove('active'));
+                document.querySelector(`[data-layout="${layout}"]`).classList.add('active');
+                
+                this.currentLayout = layout;
+                
+                // Update UI based on layout
+                if (layout === 'single') {
+                    this.elements.addPhotoBtn.style.display = 'none';
+                } else {
+                    this.elements.addPhotoBtn.style.display = 'block';
+                }
+            }
+            
+            addPhoto() {
+                // Create a temporary file input for additional photos
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (file && file.type.startsWith('image/')) {
+                        const url = URL.createObjectURL(file);
+                        this.collageImages.push(url);
+                        
+                        // Limit based on layout
+                        const maxImages = {
+                            'strip': 4,
+                            'grid2x2': 4,
+                            'grid3x3': 9
+                        };
+                        
+                        if (this.collageImages.length >= maxImages[this.currentLayout]) {
+                            this.elements.addPhotoBtn.style.display = 'none';
+                        }
+                    }
+                };
+                input.click();
+            }
+            
+            async createCollage() {
+                if (this.currentLayout === 'single' || this.collageImages.length === 1) {
+                    return this.elements.previewImage.src;
+                }
+                
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // Set canvas dimensions based on layout
+                const dimensions = {
+                    'strip': { width: 400, height: 1600, cols: 1, rows: 4 },
+                    'grid2x2': { width: 800, height: 800, cols: 2, rows: 2 },
+                    'grid3x3': { width: 900, height: 900, cols: 3, rows: 3 }
+                };
+                
+                const layout = dimensions[this.currentLayout];
+                canvas.width = layout.width;
+                canvas.height = layout.height;
+                
+                const cellWidth = layout.width / layout.cols;
+                const cellHeight = layout.height / layout.rows;
+                
+                // Fill background with vintage color
+                ctx.fillStyle = '#ecf0f1';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Load and draw images
+                const imagePromises = this.collageImages.slice(0, layout.cols * layout.rows).map((src, index) => {
+                    return new Promise((resolve) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const row = Math.floor(index / layout.cols);
+                            const col = index % layout.cols;
+                            const x = col * cellWidth;
+                            const y = row * cellHeight;
+                            
+                            // Calculate dimensions to maintain aspect ratio
+                            const imgAspect = img.width / img.height;
+                            const cellAspect = cellWidth / cellHeight;
+                            
+                            let drawWidth = cellWidth;
+                            let drawHeight = cellHeight;
+                            let offsetX = 0;
+                            let offsetY = 0;
+                            
+                            if (imgAspect > cellAspect) {
+                                drawWidth = cellHeight * imgAspect;
+                                offsetX = (cellWidth - drawWidth) / 2;
+                            } else {
+                                drawHeight = cellWidth / imgAspect;
+                                offsetY = (cellHeight - drawHeight) / 2;
+                            }
+                            
+                            // Add padding
+                            const padding = 10;
+                            ctx.drawImage(
+                                img, 
+                                x + padding + offsetX, 
+                                y + padding + offsetY, 
+                                drawWidth - 2 * padding, 
+                                drawHeight - 2 * padding
+                            );
+                            
+                            resolve();
+                        };
+                        img.src = src;
+                    });
+                });
+                
+                await Promise.all(imagePromises);
+                
+                return canvas.toDataURL('image/jpeg', 0.9);
+            }
+            
+            async showPreview() {
+                this.showLoading();
+                
+                try {
+                    let finalImageSrc;
+                    
+                    if (this.currentLayout === 'single') {
+                        // For single images, create a canvas with the filter applied
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        const img = new Image();
+                        
+                        await new Promise((resolve) => {
+                            img.onload = () => {
+                                canvas.width = img.width;
+                                canvas.height = img.height;
+                                
+                                // Apply filter effects manually for download
+                                this.applyCanvasFilter(ctx, this.currentFilter);
+                                ctx.drawImage(img, 0, 0);
+                                
+                                finalImageSrc = canvas.toDataURL('image/jpeg', 0.9);
+                                resolve();
+                            };
+                            img.src = this.currentImage;
+                        });
+                    } else {
+                        finalImageSrc = await this.createCollage();
+                    }
+                    
+                    this.elements.finalPreview.src = finalImageSrc;
+                    this.elements.previewModal.classList.add('active');
+                } catch (error) {
+                    console.error('Error creating preview:', error);
+                } finally {
+                    this.hideLoading();
+                }
+            }
+            
+            applyCanvasFilter(ctx, filter) {
+                // Build comprehensive filter string
+                let filterString = `brightness(${this.customFilters.brightness}) contrast(${this.customFilters.contrast}) saturate(${this.customFilters.saturation})`;
+                
+                // Add preset filter effects
+                const presetFilters = {
+                    'polaroid': 'sepia(0.1)',
+                    'film-grain': 'sepia(0.05)',
+                    'light-leaks': 'hue-rotate(10deg)',
+                    'toy-camera': 'sepia(0.2) hue-rotate(-10deg) saturate(1.4)',
+                    'retro-color': 'hue-rotate(20deg) sepia(0.15)',
+                    'bw': 'grayscale(1)',
+                    'sepia': 'sepia(1)',
+                    'lomo': 'sepia(0.3) hue-rotate(-5deg) saturate(1.5)',
+                    'cross-process': 'hue-rotate(15deg) sepia(0.1) saturate(1.6)',
+                    'vintage-fade': 'sepia(0.4) blur(0.5px)',
+                    'kodachrome': 'hue-rotate(5deg) sepia(0.05) saturate(1.4)'
+                };
+                
+                if (this.currentFilter !== 'none' && presetFilters[this.currentFilter]) {
+                    filterString += ` ${presetFilters[this.currentFilter]}`;
+                }
+                
+                ctx.filter = filterString;
+            }
+            
+            closePreview() {
+                this.elements.previewModal.classList.remove('active');
+            }
+            
+            downloadImage() {
+                const link = document.createElement('a');
+                link.download = `vintage-photo-${Date.now()}.jpg`;
+                link.href = this.elements.finalPreview.src;
+                link.click();
+            }
+            
+            async shareImage() {
+                if (navigator.share) {
+                    try {
+                        // Convert data URL to blob for sharing
+                        const response = await fetch(this.elements.finalPreview.src);
+                        const blob = await response.blob();
+                        const file = new File([blob], 'vintage-photo.jpg', { type: 'image/jpeg' });
+                        
+                        await navigator.share({
+                            title: 'Check out my vintage photo!',
+                            text: 'Created with Vintage Photo Booth',
+                            files: [file]
+                        });
+                    } catch (error) {
+                        console.error('Error sharing:', error);
+                        this.fallbackShare();
+                    }
+                } else {
+                    this.fallbackShare();
+                }
+            }
+            
+            fallbackShare() {
+                // Fallback sharing options
+                const shareUrl = encodeURIComponent(window.location.href);
+                const shareText = encodeURIComponent('Check out my vintage photo created with Vintage Photo Booth!');
+                
+                const shareOptions = [
+                    { name: 'Twitter', url: `https://twitter.com/intent/tweet?text=${shareText}&url=${shareUrl}` },
+                    { name: 'Facebook', url: `https://www.facebook.com/sharer/sharer.php?u=${shareUrl}` },
+                    { name: 'Copy Link', action: () => {
+                        navigator.clipboard.writeText(window.location.href);
+                        alert('Link copied to clipboard!');
+                    }}
+                ];
+                
+                const choice = prompt(`Choose sharing option:\n${shareOptions.map((opt, i) => `${i + 1}. ${opt.name}`).join('\n')}`);
+                const index = parseInt(choice) - 1;
+                
+                if (index >= 0 && index < shareOptions.length) {
+                    const option = shareOptions[index];
+                    if (option.action) {
+                        option.action();
+                    } else {
+                        window.open(option.url, '_blank');
+                    }
+                }
+            }
+            
+            startOver() {
+                // Reset everything
+                this.currentImage = null;
+                this.currentFilter = 'none';
+                this.currentLayout = 'single';
+                this.currentFrame = 'none';
+                this.currentTexture = 'none';
+                this.collageImages = [];
+                this.customFilters = {
+                    brightness: 1,
+                    contrast: 1,
+                    saturation: 1
+                };
+                
+                // Reset sliders
+                this.elements.brightnessSlider.value = 1;
+                this.elements.contrastSlider.value = 1;
+                this.elements.saturationSlider.value = 1;
+                
+                // Hide editing workspace
+                this.elements.editingWorkspace.classList.remove('active');
+                
+                // Reset all buttons
+                this.elements.filterBtns.forEach(btn => btn.classList.remove('active'));
+                document.querySelector('[data-filter="none"]').classList.add('active');
+                
+                this.elements.collageBtns.forEach(btn => btn.classList.remove('active'));
+                document.querySelector('[data-layout="single"]').classList.add('active');
+                
+                this.elements.frameBtns.forEach(btn => btn.classList.remove('active'));
+                document.querySelector('[data-frame="none"]').classList.add('active');
+                
+                this.elements.textureBtns.forEach(btn => btn.classList.remove('active'));
+                document.querySelector('[data-texture="none"]').classList.add('active');
+                
+                // Reset file input
+                this.elements.fileInput.value = '';
+                
+                // Go back to capture tab
+                this.switchTab('capture');
+            }
+            
+            showLoading() {
+                this.elements.loading.classList.add('active');
+            }
+            
+            hideLoading() {
+                this.elements.loading.classList.remove('active');
+            }
+        }
+        
+        // Initialize the app when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new VintagePhotoBooth();
+        });
+        
+        // Handle page visibility changes to manage camera
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                // Page is hidden, pause camera if needed
+            } else {
+                // Page is visible, resume camera if needed
+            }
+        });
+    </script>
+</body>
+</html>
